@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { POLLINATIONS_CHAT_ENDPOINT, SYSTEM_PROMPT } from '../utils/constants';
-import { usePollenAuth } from './usePollenAuth';
+import { usePollenAuth } from './usePollenAuth.tsx';
 
 export const useGemini = () => {
   const [loading, setLoading] = useState(false);

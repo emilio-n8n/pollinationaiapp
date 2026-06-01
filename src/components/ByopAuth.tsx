@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePollenAuth } from '../hooks/usePollenAuth';
+import { usePollenAuth } from '../hooks/usePollenAuth.tsx';
 import { Wallet, LogOut } from 'lucide-react';
 
 const ByopAuth: React.FC = () => {

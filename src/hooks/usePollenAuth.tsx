@@ -1,7 +1,18 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { POLLINATIONS_AUTH_URL, POLLINATIONS_ACCOUNT_URL } from '../utils/constants';
 
-export const usePollenAuth = () => {
+interface AuthContextType {
+  token: string | null;
+  balance: number | null;
+  login: () => void;
+  logout: () => void;
+  isAuthenticated: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('pollen_token'));
   const [balance, setBalance] = useState<number | null>(null);
 
@@ -14,7 +25,6 @@ export const usePollenAuth = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        // Assuming the response is the balance number or { balance: number }
         setBalance(typeof data === 'number' ? data : data.balance);
       }
     } catch (err) {
@@ -25,14 +35,16 @@ export const usePollenAuth = () => {
   useEffect(() => {
     // Handle redirect flow: api_key is in the URL fragment (#api_key=sk_...)
     const hash = window.location.hash.slice(1);
-    const params = new URLSearchParams(hash);
-    const urlToken = params.get('api_key');
+    if (hash) {
+      const params = new URLSearchParams(hash);
+      const urlToken = params.get('api_key');
 
-    if (urlToken) {
-      localStorage.setItem('pollen_token', urlToken);
-      setToken(urlToken);
-      // Clean up URL
-      window.history.replaceState({}, document.title, window.location.pathname);
+      if (urlToken) {
+        localStorage.setItem('pollen_token', urlToken);
+        setToken(urlToken);
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
     }
   }, []);
 
@@ -61,5 +73,17 @@ export const usePollenAuth = () => {
     setBalance(null);
   };
 
-  return { token, balance, login, logout, isAuthenticated: !!token };
+  return (
+    <AuthContext.Provider value={{ token, balance, login, logout, isAuthenticated: !!token }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const usePollenAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('usePollenAuth must be used within an AuthProvider');
+  }
+  return context;
 };

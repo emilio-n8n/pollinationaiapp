@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { POLLINATIONS_IMAGE_ENDPOINT } from '../utils/constants';
-import { usePollenAuth } from './usePollenAuth';
+import { usePollenAuth } from './usePollenAuth.tsx';
 
 export const usePollinations = () => {
   const [loading, setLoading] = useState(false);
