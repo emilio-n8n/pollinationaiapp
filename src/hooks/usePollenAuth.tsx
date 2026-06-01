@@ -1,19 +1,18 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { POLLINATIONS_AUTH_URL, POLLINATIONS_ACCOUNT_URL } from '../utils/constants';
+import { POLLINATIONS_ACCOUNT_URL } from '../utils/constants';
 
 interface AuthContextType {
   token: string | null;
   balance: number | null;
-  login: () => void;
-  logout: () => void;
+  setToken: (token: string | null) => void;
   isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('pollen_token'));
+  const [token, setTokenInternal] = useState<string | null>(localStorage.getItem('pollen_token'));
   const [balance, setBalance] = useState<number | null>(null);
 
   const fetchBalance = useCallback(async (authToken: string) => {
@@ -26,55 +25,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (response.ok) {
         const data = await response.json();
         setBalance(typeof data === 'number' ? data : data.balance);
+      } else {
+        setBalance(null);
       }
     } catch (err) {
       console.error('Failed to fetch pollen balance', err);
+      setBalance(null);
     }
   }, []);
 
-  useEffect(() => {
-    // Handle redirect flow: api_key is in the URL fragment (#api_key=sk_...)
-    const hash = window.location.hash.slice(1);
-    if (hash) {
-      const params = new URLSearchParams(hash);
-      const urlToken = params.get('api_key');
-
-      if (urlToken) {
-        localStorage.setItem('pollen_token', urlToken);
-        setToken(urlToken);
-        // Clean up URL
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
+  const setToken = (newToken: string | null) => {
+    if (newToken) {
+      localStorage.setItem('pollen_token', newToken);
+    } else {
+      localStorage.removeItem('pollen_token');
     }
-  }, []);
+    setTokenInternal(newToken);
+  };
 
   useEffect(() => {
     if (token) {
       fetchBalance(token);
-
-      // Auto-refresh every 24h
-      const interval = setInterval(() => fetchBalance(token), 24 * 60 * 60 * 1000);
+      const interval = setInterval(() => fetchBalance(token), 60 * 60 * 1000); // Check every hour
       return () => clearInterval(interval);
+    } else {
+      setBalance(null);
     }
   }, [token, fetchBalance]);
 
-  const login = () => {
-    const appKey = import.meta.env.VITE_POLLINATIONS_APP_KEY;
-    const params = new URLSearchParams({
-      redirect_uri: window.location.origin + window.location.pathname,
-      client_id: appKey || '',
-    });
-    window.location.href = `${POLLINATIONS_AUTH_URL}?${params.toString()}`;
-  };
-
-  const logout = () => {
-    localStorage.removeItem('pollen_token');
-    setToken(null);
-    setBalance(null);
-  };
-
   return (
-    <AuthContext.Provider value={{ token, balance, login, logout, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ token, balance, setToken, isAuthenticated: !!token }}>
       {children}
     </AuthContext.Provider>
   );
