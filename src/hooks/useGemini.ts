@@ -1,60 +1,71 @@
 import { useState } from 'react';
-import { GEMINI_API_ENDPOINT, SYSTEM_PROMPT } from '../utils/constants';
-import { getBase64Data, getBase64MimeType } from '../utils/imageHelpers';
+import { POLLINATIONS_CHAT_ENDPOINT, SYSTEM_PROMPT } from '../utils/constants';
+import { usePollenAuth } from './usePollenAuth';
 
 export const useGemini = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { token } = usePollenAuth();
 
   const generate = async (prompt: string, imageBase64?: string): Promise<string> => {
     setLoading(true);
     setError(null);
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
-    if (!apiKey) {
-      setError('Gemini API key is missing');
-      setLoading(false);
-      throw new Error('Gemini API key is missing');
-    }
+    const appKey = import.meta.env.VITE_POLLINATIONS_APP_KEY;
 
     try {
-      const contents = [
+      const messages: any[] = [
         {
-          role: 'user',
-          parts: [
-            { text: SYSTEM_PROMPT },
-            { text: prompt }
-          ]
+          role: 'system',
+          content: SYSTEM_PROMPT
         }
       ];
 
+      const userContent: any[] = [{ type: 'text', text: prompt }];
+
       if (imageBase64) {
-        contents[0].parts.push({
-          inline_data: {
-            mime_type: getBase64MimeType(imageBase64),
-            data: getBase64Data(imageBase64)
+        userContent.push({
+          type: 'image_url',
+          image_url: {
+            url: imageBase64
           }
-        } as any);
+        });
       }
 
-      const response = await fetch(`${GEMINI_API_ENDPOINT}?key=${apiKey}`, {
+      messages.push({
+        role: 'user',
+        content: userContent
+      });
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      } else if (appKey) {
+        headers['Authorization'] = `Bearer ${appKey}`;
+      }
+
+      const response = await fetch(POLLINATIONS_CHAT_ENDPOINT, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ contents }),
+        headers,
+        body: JSON.stringify({
+          model: 'gemini', // Using Pollinations' gemini model
+          messages,
+        }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to call Gemini API');
+        throw new Error(errorData.error?.message || 'Failed to call Pollinations Chat API');
       }
 
       const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const text = data.choices?.[0]?.message?.content;
 
       if (!text) {
-        throw new Error('No response from Gemini');
+        throw new Error('No response from AI');
       }
 
       setLoading(false);
