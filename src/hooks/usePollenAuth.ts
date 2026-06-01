@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { POLLINATIONS_AUTH_URL, POLLINATIONS_ACCOUNT_URL } from '../utils/constants';
 
 export const usePollenAuth = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem('pollen_token'));
@@ -6,28 +7,27 @@ export const usePollenAuth = () => {
 
   const fetchBalance = useCallback(async (authToken: string) => {
     try {
-      // Trying to fetch from what looks like a plausible balance endpoint
-      // based on typical API structures (since I couldn't find exact one in docs)
-      const response = await fetch('https://auth.pollinations.ai/pollen', {
+      const response = await fetch(`${POLLINATIONS_ACCOUNT_URL}/balance`, {
         headers: {
           'Authorization': `Bearer ${authToken}`
         }
       });
       if (response.ok) {
         const data = await response.json();
-        setBalance(data.balance);
+        // Assuming the response is the balance number or { balance: number }
+        setBalance(typeof data === 'number' ? data : data.balance);
       }
     } catch (err) {
       console.error('Failed to fetch pollen balance', err);
-      // Fallback/Mock for demo if endpoint fails
-      if (!balance) setBalance(1000);
     }
-  }, [balance]);
+  }, []);
 
   useEffect(() => {
-    // Check for token in URL after redirect
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlToken = urlParams.get('token');
+    // Handle redirect flow: api_key is in the URL fragment (#api_key=sk_...)
+    const hash = window.location.hash.slice(1);
+    const params = new URLSearchParams(hash);
+    const urlToken = params.get('api_key');
+
     if (urlToken) {
       localStorage.setItem('pollen_token', urlToken);
       setToken(urlToken);
@@ -40,14 +40,19 @@ export const usePollenAuth = () => {
     if (token) {
       fetchBalance(token);
 
-      // Auto-refresh every 24h as per requirements
+      // Auto-refresh every 24h
       const interval = setInterval(() => fetchBalance(token), 24 * 60 * 60 * 1000);
       return () => clearInterval(interval);
     }
   }, [token, fetchBalance]);
 
   const login = () => {
-    window.location.href = 'https://enter.pollinations.ai';
+    const appKey = import.meta.env.VITE_POLLINATIONS_APP_KEY;
+    const params = new URLSearchParams({
+      redirect_uri: window.location.origin + window.location.pathname,
+      client_id: appKey || '',
+    });
+    window.location.href = `${POLLINATIONS_AUTH_URL}?${params.toString()}`;
   };
 
   const logout = () => {

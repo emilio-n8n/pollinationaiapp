@@ -1,7 +1,9 @@
-export const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-export const POLLINATIONS_IMAGE_ENDPOINT = 'https://image.pollinations.ai/prompt';
+export const POLLINATIONS_BASE_URL = 'https://gen.pollinations.ai';
+export const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+export const POLLINATIONS_IMAGE_ENDPOINT = 'https://gen.pollinations.ai/image';
 export const SYSTEM_PROMPT = "You are a professional image editor assistant. Analyze the image and user's request, then return SPECIFIC instructions for an image generation AI to modify the image. Be precise about colors, lighting, composition, style, mood. Return ONLY the instruction text, no explanations.";
-export const POLLINATIONS_AUTH_URL = 'https://enter.pollinations.ai';
+export const POLLINATIONS_AUTH_URL = 'https://enter.pollinations.ai/authorize';
+export const POLLINATIONS_ACCOUNT_URL = 'https://gen.pollinations.ai/account';
 
 export interface Message {
   role: 'user' | 'model';

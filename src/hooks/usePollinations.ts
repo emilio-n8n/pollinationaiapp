@@ -13,20 +13,18 @@ export const usePollinations = () => {
 
     const { width = 1024, height = 1024, seed = Math.floor(Math.random() * 1000000) } = options;
     const encodedPrompt = encodeURIComponent(prompt);
-    // model=gpt-image-2 was in requirements, but Pollinations docs mention 'flux' or 'turbo'.
-    // Sticking to requirements' model but using fetch to apply headers.
-    const url = `${POLLINATIONS_IMAGE_ENDPOINT}/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&model=gpt-image-2&nologo=true`;
+    // Using new gen.pollinations.ai endpoint
+    const url = `${POLLINATIONS_IMAGE_ENDPOINT}/${encodedPrompt}?width=${width}&height=${height}&seed=${seed}&model=gpt-image-2`;
 
     try {
       const headers: Record<string, string> = {};
+      const appKey = import.meta.env.VITE_POLLINATIONS_APP_KEY;
+
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const appKey = import.meta.env.VITE_POLLINATIONS_APP_KEY;
-      if (appKey) {
-        // Assuming app key might be sent as a header if not part of BYOP
-        headers['X-App-Key'] = appKey;
+      } else if (appKey) {
+        // If no user token, use app key if it's a publishable key
+        headers['Authorization'] = `Bearer ${appKey}`;
       }
 
       const response = await fetch(url, { headers });
@@ -35,7 +33,6 @@ export const usePollinations = () => {
         throw new Error('Failed to generate image from Pollinations');
       }
 
-      // Fetch as blob to ensure Authorization header is used
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
 
